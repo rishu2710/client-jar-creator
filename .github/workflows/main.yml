@@ -25,35 +25,41 @@ jobs:
         id: vars
         run: |
           REPO_NAME=$(basename $GITHUB_REPOSITORY)
-          VERSION=$(xmllint --xpath "string(/project/version)" pom.xml)
-          GROUP_ID=$(xmllint --xpath "string(/project/groupId)" pom.xml)
-          ARTIFACT_ID=$(xmllint --xpath "string(/project/artifactId)" pom.xml)
+          VERSION=$(xmlstarlet sel -t -v "/project/version" pom.xml)
+          GROUP_ID=$(xmlstarlet sel -t -v "/project/groupId" pom.xml)
+          ARTIFACT_ID=$(xmlstarlet sel -t -v "/project/artifactId" pom.xml)
+
+          echo "Repo Name   : $REPO_NAME"
+          echo "Version     : $VERSION"
+          echo "Group ID    : $GROUP_ID"
+          echo "Artifact ID : $ARTIFACT_ID"
 
           echo "repo=$REPO_NAME" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "group=$GROUP_ID" >> $GITHUB_OUTPUT
           echo "artifact=$ARTIFACT_ID" >> $GITHUB_OUTPUT
 
-      - name: Generate Client Code
-        run: |
-          java -jar ${{ steps.vars.outputs.repo }}-${{ steps.vars.outputs.version }}.jar generate \
-            -i swagger.json \
-            -g java \
-            -o client-code \
-            --library webclient \
-            --additional-properties useJakartaEe=true
 
-      - name: Update Generated POM
-        run: |
-          POM_FILE=client-code/pom.xml
+      # - name: Generate Client Code
+      #   run: |
+      #     java -jar ${{ steps.vars.outputs.repo }}-${{ steps.vars.outputs.version }}.jar generate \
+      #       -i swagger.json \
+      #       -g java \
+      #       -o client-code \
+      #       --library webclient \
+      #       --additional-properties useJakartaEe=true
 
-          # Replace spring boot version
-          sed -i 's|<spring-boot-version>.*</spring-boot-version>|<spring-boot-version>3.5.4</spring-boot-version>|' $POM_FILE
+      # - name: Update Generated POM
+      #   run: |
+      #     POM_FILE=client-code/pom.xml
 
-          # Update groupId, artifactId, name, version
-          xmlstarlet ed -L \
-            -u "/project/groupId" -v "${{ steps.vars.outputs.group }}" \
-            -u "/project/artifactId" -v "${{ steps.vars.outputs.artifact }}" \
-            -u "/project/name" -v "${{ steps.vars.outputs.repo }}-client-client" \
-            -u "/project/version" -v "${{ steps.vars.outputs.version }}" \
-            $POM_FILE
+      #     # Replace spring boot version
+      #     sed -i 's|<spring-boot-version>.*</spring-boot-version>|<spring-boot-version>3.5.4</spring-boot-version>|' $POM_FILE
+
+      #     # Update groupId, artifactId, name, version
+      #     xmlstarlet ed -L \
+      #       -u "/project/groupId" -v "${{ steps.vars.outputs.group }}" \
+      #       -u "/project/artifactId" -v "${{ steps.vars.outputs.artifact }}" \
+      #       -u "/project/name" -v "${{ steps.vars.outputs.repo }}-client-client" \
+      #       -u "/project/version" -v "${{ steps.vars.outputs.version }}" \
+      #       $POM_FILE
