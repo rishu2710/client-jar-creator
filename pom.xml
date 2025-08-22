@@ -9,10 +9,10 @@
 		<version>3.5.4</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.example</groupId>
-	<artifactId>MyService</artifactId>
+	<groupId>raj.code</groupId>
+	<artifactId>MyrishuService</artifactId>
 	<version>1.0.0</version>
-	<name>My Service</name>
+	<name>projectrishu</name>
 	<description>A Spring Boot service archetype</description>
 	<properties>
 		<java.version>17</java.version>
