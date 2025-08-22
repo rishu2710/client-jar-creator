@@ -1,47 +1,133 @@
-name: Sync Client POM (Dry Run)
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>same as parent</groupId>
+    <artifactId>same as parent</artifactId>
+    <packaging>jar</packaging>
+    <name>repo-name-client</name>
+    <version>same as of parent jar</version>
+    <url>https://github.com/openapitools/openapi-generator</url>
+    <description>OpenAPI Java</description>
+    <scm>
+        <connection>scm:git:git@github.com:openapitools/openapi-generator.git</connection>
+        <developerConnection>scm:git:git@github.com:openapitools/openapi-generator.git</developerConnection>
+        <url>https://github.com/openapitools/openapi-generator</url>
+    </scm>
 
-on:
-  workflow_dispatch:
+    <licenses>
+        <license>
+            <name>Unlicense</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
-jobs:
-  sync-client-pom:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    <developers>
+        <developer>
+            <name>OpenAPI-Generator Contributors</name>
+            <email>team@openapitools.org</email>
+            <organization>OpenAPITools.org</organization>
+            <organizationUrl>http://openapitools.org</organizationUrl>
+        </developer>
+    </developers>
 
-      - name: Debug repo structure
-        run: |
-          echo "Repo structure:"
-          ls -R
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
-      - name: Show first lines of both POMs
-        run: |
-          echo "===== Parent POM ====="
-          head -n 15 pom.xml
-          echo "===== Client POM ====="
-          head -n 15 client-code/pom.xml
+    <dependencies>
 
-      - name: Extract values from parent POM
-        id: parent
-        run: |
-          PARENT_GROUP_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:groupId" pom.xml)
-          PARENT_ARTIFACT_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:artifactId" pom.xml)
-          PARENT_VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:version" pom.xml)
+        <!-- @Nullable annotation -->
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>3.0.2</version>
+        </dependency>
 
-          echo "groupId=$PARENT_GROUP_ID" >> $GITHUB_OUTPUT
-          echo "artifactId=$PARENT_ARTIFACT_ID" >> $GITHUB_OUTPUT
-          echo "version=$PARENT_VERSION" >> $GITHUB_OUTPUT
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>${reactor-version}</version>
+        </dependency>
 
-      - name: Print parent values
-        run: |
-          echo "GroupId: ${{ steps.parent.outputs.groupId }}"
-          echo "ArtifactId: ${{ steps.parent.outputs.artifactId }}"
-          echo "Version: ${{ steps.parent.outputs.version }}"
+        <!-- HTTP client: Springboot starter WebFlux -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+            <version>${spring-boot-version}</version>
+        </dependency>
 
-      - name: Show full updated client POM
-        run: |
-          xmlstarlet ed -N x="http://maven.apache.org/PO
+        <dependency>
+            <groupId>io.projectreactor.netty</groupId>
+            <artifactId>reactor-netty-http</artifactId>
+            <version>${reactor-netty-version}</version>
+        </dependency>
+
+        <!-- JSON processing: jackson -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson-databind-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openapitools</groupId>
+            <artifactId>jackson-databind-nullable</artifactId>
+            <version>${jackson-databind-nullable-version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+            <version>${jakarta-annotation-version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit-version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jackson-version>2.17.1</jackson-version>
+        <jackson-databind-version>2.17.1</jackson-databind-version>
+        <jackson-databind-nullable-version>0.2.6</jackson-databind-nullable-version>
+        <spring-boot-version>3.5.4</spring-boot-version>
+        <jakarta-annotation-version>2.1.1</jakarta-annotation-version>
+        <reactor-version>3.5.12</reactor-version>
+        <reactor-netty-version>1.1.13</reactor-netty-version>
+        <junit-version>5.10.2</junit-version>
+    </properties>
+</project>
+
