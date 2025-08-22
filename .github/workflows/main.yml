@@ -1,0 +1,57 @@
+name: Sync Client POM
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  sync-client-pom:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install xmlstarlet
+        run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+
+      - name: Sync client pom with parent
+        run: |
+          PARENT_POM="./pom.xml"
+          CLIENT_POM="./client-code/pom.xml"
+
+          # Extract values from parent pom.xml
+          GROUP_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" -t -v "/x:project/x:groupId" "$PARENT_POM")
+          ARTIFACT_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" -t -v "/x:project/x:artifactId" "$PARENT_POM")
+          VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" -t -v "/x:project/x:version" "$PARENT_POM")
+
+          # Remove existing top-level values in client pom
+          xmlstarlet ed -L \
+            -N x="http://maven.apache.org/POM/4.0.0" \
+            -d "/x:project/x:groupId" \
+            -d "/x:project/x:artifactId" \
+            -d "/x:project/x:version" \
+            "$CLIENT_POM"
+
+          # Add parent values at top
+          xmlstarlet ed -L \
+            -N x="http://maven.apache.org/POM/4.0.0" \
+            -s "/x:project" -t elem -n groupId -v "$GROUP_ID" \
+            -s "/x:project" -t elem -n artifactId -v "$ARTIFACT_ID" \
+            -s "/x:project" -t elem -n version -v "$VERSION" \
+            "$CLIENT_POM"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ./client-code/pom.xml
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: sync client pom with parent pom"
+            git push
+          fi
