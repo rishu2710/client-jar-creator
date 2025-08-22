@@ -1,0 +1,292 @@
+openapi: 3.1.0
+info:
+  contact:
+    email: core-starter@astreya.com
+    name: Core Starter Team
+  description: A Spring Boot service archetype
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+  title: My Service API
+  version: 1.0.0
+servers:
+- description: API Server
+  url: http://localhost:8080/myservice-service
+paths:
+  /sample/{id}:
+    delete:
+      operationId: deleteSample
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      - explode: false
+        in: header
+        name: X-Tenant-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: Auth_Token
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+          description: OK
+      tags:
+      - sample-controller
+      x-accepts:
+      - '*/*'
+    get:
+      operationId: getSampleById
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      - explode: false
+        in: header
+        name: X-Tenant-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: Auth_Token
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+          description: OK
+      tags:
+      - sample-controller
+      x-accepts:
+      - '*/*'
+    put:
+      operationId: updateSample
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      - explode: false
+        in: header
+        name: X-Tenant-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: Auth_Token
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Sample"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+          description: OK
+      tags:
+      - sample-controller
+      x-content-type: application/json
+      x-accepts:
+      - '*/*'
+  /sample:
+    get:
+      operationId: getAllSamples
+      parameters:
+      - explode: false
+        in: header
+        name: X-Tenant-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: Auth_Token
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+          description: OK
+      tags:
+      - sample-controller
+      x-accepts:
+      - '*/*'
+    post:
+      operationId: createSample
+      parameters:
+      - explode: false
+        in: header
+        name: X-Tenant-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: header
+        name: Auth_Token
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Sample"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+          description: OK
+      tags:
+      - sample-controller
+      x-content-type: application/json
+      x-accepts:
+      - '*/*'
+  /debug-openapi:
+    get:
+      operationId: debugOpenAPI
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: OK
+      tags:
+      - debug-controller
+      x-accepts:
+      - '*/*'
+components:
+  schemas:
+    Sample:
+      example:
+        modifiedOn: 2000-01-23T04:56:07.000+00:00
+        createdBy: createdBy
+        name: name
+        modifiedBy: modifiedBy
+        id: 0
+        createdOn: 2000-01-23T04:56:07.000+00:00
+        status: status
+      properties:
+        id:
+          format: int64
+          type: integer
+        name:
+          maxLength: 255
+          minLength: 2
+          type: string
+        createdBy:
+          maxLength: 100
+          minLength: 0
+          type: string
+        createdOn:
+          format: date-time
+          type: string
+        modifiedBy:
+          maxLength: 100
+          minLength: 0
+          type: string
+        modifiedOn:
+          format: date-time
+          type: string
+        status:
+          type: string
+    ApiResponse:
+      example:
+        data: "{}"
+        success: true
+        message: message
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+

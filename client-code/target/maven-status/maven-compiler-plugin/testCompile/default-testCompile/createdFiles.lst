@@ -1,0 +1,4 @@
+org\openapitools\client\model\SampleTest.class
+org\openapitools\client\api\DebugControllerApiTest.class
+org\openapitools\client\api\SampleControllerApiTest.class
+org\openapitools\client\model\ModelApiResponseTest.class

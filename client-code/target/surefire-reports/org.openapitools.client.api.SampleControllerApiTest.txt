@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.openapitools.client.api.SampleControllerApiTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 5, Time elapsed: 0 s -- in org.openapitools.client.api.SampleControllerApiTest
