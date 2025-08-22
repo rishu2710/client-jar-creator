@@ -17,6 +17,9 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      
+      - name: Install xmllint
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
 
       - name: Extract repo name and parent version
         id: vars
