@@ -1,60 +1,47 @@
 name: Sync Client POM (Dry Run)
 
 on:
-  push:
-    branches:
-      - main
-      - develop
   workflow_dispatch:
 
 jobs:
   sync-client-pom:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install xmlstarlet
-        run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+      - name: Debug repo structure
+        run: |
+          echo "Repo structure:"
+          ls -R
+
+      - name: Show first lines of both POMs
+        run: |
+          echo "===== Parent POM ====="
+          head -n 15 pom.xml
+          echo "===== Client POM ====="
+          head -n 15 client-code/pom.xml
 
       - name: Extract values from parent POM
-        id: extract
+        id: parent
         run: |
-          PARENT_POM="./pom.xml"
+          PARENT_GROUP_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:groupId" pom.xml)
+          PARENT_ARTIFACT_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:artifactId" pom.xml)
+          PARENT_VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:version" pom.xml)
 
-          GROUP_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" -t -v "/x:project/x:groupId" "$PARENT_POM")
-          ARTIFACT_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" -t -v "/x:project/x:artifactId" "$PARENT_POM")
-          VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" -t -v "/x:project/x:version" "$PARENT_POM")
+          echo "groupId=$PARENT_GROUP_ID" >> $GITHUB_OUTPUT
+          echo "artifactId=$PARENT_ARTIFACT_ID" >> $GITHUB_OUTPUT
+          echo "version=$PARENT_VERSION" >> $GITHUB_OUTPUT
 
-          echo "GROUP_ID=$GROUP_ID" >> $GITHUB_ENV
-          echo "ARTIFACT_ID=$ARTIFACT_ID" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-          echo "📦 Extracted from parent POM:"
-          echo "   Group ID: $GROUP_ID"
-          echo "   Artifact ID: $ARTIFACT_ID"
-          echo "   Version: $VERSION"
-
-      - name: Generate updated client POM (dry run)
+      - name: Print parent values
         run: |
-          CLIENT_POM="./client-code/pom.xml"
+          echo "GroupId: ${{ steps.parent.outputs.groupId }}"
+          echo "ArtifactId: ${{ steps.parent.outputs.artifactId }}"
+          echo "Version: ${{ steps.parent.outputs.version }}"
 
-          # remove existing groupId/artifactId/version at the top if present
-          xmlstarlet ed -L \
-            -N x="http://maven.apache.org/POM/4.0.0" \
-            -d "/x:project/x:groupId" \
-            -d "/x:project/x:artifactId" \
-            -d "/x:project/x:version" \
-            "$CLIENT_POM"
-
-          # add parent values at the top of client pom
-          xmlstarlet ed -L \
-            -N x="http://maven.apache.org/POM/4.0.0" \
-            -s "/x:project" -t elem -n "groupId" -v "$GROUP_ID" \
-            -s "/x:project" -t elem -n "artifactId" -v "$ARTIFACT_ID" \
-            -s "/x:project" -t elem -n "version" -v "$VERSION" \
-            "$CLIENT_POM"
-
-          echo "✅ Updated client POM (dry run):"
-          cat "$CLIENT_POM"
+      - name: Show full updated client POM
+        run: |
+          xmlstarlet ed -N x="http://maven.apache.org/PO
