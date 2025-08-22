@@ -1,23 +1,56 @@
+name: Generate Client Code
+
+on:
+  push:
+    paths:
+      - "swagger.json"   # only run when swagger.json changes
+
 jobs:
-  sync-client-pom:
+  generate-client:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install xmlstarlet
-        run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
-      - name: Extract parent pom values
-        id: extract
+      - name: Extract repo name and parent version
+        id: vars
         run: |
-          PARENT_GROUP_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:groupId" pom.xml)
-          PARENT_ARTIFACT_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:artifactId" pom.xml)
-          PARENT_VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:version" pom.xml)
+          REPO_NAME=$(basename $GITHUB_REPOSITORY)
+          VERSION=$(xmllint --xpath "string(/project/version)" pom.xml)
+          GROUP_ID=$(xmllint --xpath "string(/project/groupId)" pom.xml)
+          ARTIFACT_ID=$(xmllint --xpath "string(/project/artifactId)" pom.xml)
 
-          echo "groupId=$PARENT_GROUP_ID" >> $GITHUB_OUTPUT
-          echo "artifactId=$PARENT_ARTIFACT_ID" >> $GITHUB_OUTPUT
-          echo "version=$PARENT_VERSION" >> $GITHUB_OUTPUT
+          echo "repo=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "group=$GROUP_ID" >> $GITHUB_OUTPUT
+          echo "artifact=$ARTIFACT_ID" >> $GITHUB_OUTPUT
+
+      - name: Generate Client Code
+        run: |
+          java -jar ${{ steps.vars.outputs.repo }}-${{ steps.vars.outputs.version }}.jar generate \
+            -i swagger.json \
+            -g java \
+            -o client-code \
+            --library webclient \
+            --additional-properties useJakartaEe=true
+
+      - name: Update Generated POM
+        run: |
+          POM_FILE=client-code/pom.xml
+
+          # Replace spring boot version
+          sed -i 's|<spring-boot-version>.*</spring-boot-version>|<spring-boot-version>3.5.4</spring-boot-version>|' $POM_FILE
+
+          # Update groupId, artifactId, name, version
+          xmlstarlet ed -L \
+            -u "/project/groupId" -v "${{ steps.vars.outputs.group }}" \
+            -u "/project/artifactId" -v "${{ steps.vars.outputs.artifact }}" \
+            -u "/project/name" -v "${{ steps.vars.outputs.repo }}-client-client" \
+            -u "/project/version" -v "${{ steps.vars.outputs.version }}" \
+            $POM_FILE
