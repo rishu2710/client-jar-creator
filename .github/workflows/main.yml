@@ -2,8 +2,8 @@ name: Generate Client Code
 
 on:
   push:
-    paths:
-      - "swagger.json"   # only run when swagger.json changes
+    # paths:
+    #   - "swagger.json"   # only run when swagger.json changes
 
 jobs:
   generate-client:
