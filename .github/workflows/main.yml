@@ -18,7 +18,9 @@ jobs:
       - name: Define Spring Boot Version
         run: echo "SPRING_BOOT_VERSION=3.5.4" >> $GITHUB_ENV
 
-      - name: Extract values from primary pom.xml
+ # Extract values from parent pom.xml
+      - name: Extract Parent POM values
+        id: extract
         run: |
           PARENT_GROUP_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
             -t -v "/x:project/x:groupId" pom.xml)
@@ -28,27 +30,36 @@ jobs:
             -t -v "/x:project/x:version" pom.xml)
           PARENT_PACKAGING=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
             -t -v "/x:project/x:packaging" pom.xml)
+          SPRING_BOOT_VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:parent/x:version" pom.xml)
 
           echo "PARENT_GROUP_ID=$PARENT_GROUP_ID" >> $GITHUB_ENV
           echo "PARENT_ARTIFACT_ID=$PARENT_ARTIFACT_ID" >> $GITHUB_ENV
           echo "PARENT_VERSION=$PARENT_VERSION" >> $GITHUB_ENV
           echo "PARENT_PACKAGING=$PARENT_PACKAGING" >> $GITHUB_ENV
+          echo "SPRING_BOOT_VERSION=$SPRING_BOOT_VERSION" >> $GITHUB_ENV
 
-      - name: Update secondary pom.xml
+      # Update client-code/pom.xml with parent values
+      - name: Update client-code/pom.xml
         run: |
-          # Update Spring Boot version manually
+          # Update Spring Boot version
           xmlstarlet ed --inplace \
+            -N x="http://maven.apache.org/POM/4.0.0" \
             -u "/x:project/x:properties/x:spring-boot-version" \
-            -v "$SPRING_BOOT_VERSION" client-code/pom.xml \
-            -N x="http://maven.apache.org/POM/4.0.0"
+            -v "$SPRING_BOOT_VERSION" client-code/pom.xml
 
-          # Update groupId, artifactId, version, packaging from parent pom
+          # Update groupId, artifactId, version, packaging
           xmlstarlet ed --inplace \
+            -N x="http://maven.apache.org/POM/4.0.0" \
             -u "/x:project/x:groupId" -v "$PARENT_GROUP_ID" \
             -u "/x:project/x:artifactId" -v "MyrishuService-client" \
             -u "/x:project/x:version" -v "$PARENT_VERSION" \
             -u "/x:project/x:packaging" -v "$PARENT_PACKAGING" \
-            -N x="http://maven.apache.org/POM/4.0.0" client-code/pom.xml
+            client-code/pom.xml
+
+          echo "Updated client-code/pom.xml:"
+          cat client-code/pom.xml
+
 
       - name: Print updated secondary pom.xml
         run: cat client-code/pom.xml
