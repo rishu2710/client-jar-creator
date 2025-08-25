@@ -1,72 +1,69 @@
-name: Update Client POM
+name: Sync POM Values
 
 on:
-  push:
-    # branches:
-    #   - main
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  update-pom:
+  update-client-pom:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Install xmlstarlet
-        run: sudo apt-get update && sudo apt-get install -y xmlstarlet
-
-      - name: Extract values from root pom
+      - name: Extract values from root POM
         id: extract
         run: |
-          PRIMARY_POM="pom.xml"
+          ROOT_POM="pom.xml"
 
-          GROUP_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:groupId" $PRIMARY_POM)
+          groupId=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:groupId" $ROOT_POM)
 
-          ARTIFACT_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:artifactId" $PRIMARY_POM)
+          artifactId=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:artifactId" $ROOT_POM)
 
-          VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:version" $PRIMARY_POM)
+          version=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:version" $ROOT_POM)
 
-          SPRING_BOOT_VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:parent/x:version" $PRIMARY_POM)
+          springBootVersion=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:properties/x:spring-boot-version" $ROOT_POM)
+
+          echo "groupId=$groupId" >> $GITHUB_ENV
+          echo "artifactId=$artifactId" >> $GITHUB_ENV
+          echo "version=$version" >> $GITHUB_ENV
+          echo "springBootVersion=$springBootVersion" >> $GITHUB_ENV
 
           echo "Extracted values:"
-          echo "  groupId=$GROUP_ID"
-          echo "  artifactId=$ARTIFACT_ID"
-          echo "  version=$VERSION"
-          echo "  springBootVersion=$SPRING_BOOT_VERSION"
-
-          echo "groupId=$GROUP_ID" >> $GITHUB_ENV
-          echo "artifactId=$ARTIFACT_ID" >> $GITHUB_ENV
-          echo "version=$VERSION" >> $GITHUB_ENV
-          echo "springBootVersion=$SPRING_BOOT_VERSION" >> $GITHUB_ENV
+          echo "  groupId: $groupId"
+          echo "  artifactId: $artifactId"
+          echo "  version: $version"
+          echo "  springBootVersion: $springBootVersion"
 
       - name: Update client pom
         run: |
           SECONDARY_POM="client-code/pom.xml"
 
           xmlstarlet ed -L \
+            -N x="http://maven.apache.org/POM/4.0.0" \
             -u "/x:project/x:properties/x:spring-boot-version" -v "$springBootVersion" \
             -u "/x:project/x:groupId" -v "$groupId" \
             -u "/x:project/x:artifactId" -v "${artifactId}-client" \
             -u "/x:project/x:version" -v "$version" \
             $SECONDARY_POM
 
+          # Format XML for readability
+          xmlstarlet fo $SECONDARY_POM > $SECONDARY_POM.tmp && mv $SECONDARY_POM.tmp $SECONDARY_POM
+
           echo "Updated client POM (client-code/pom.xml):"
           cat $SECONDARY_POM
 
-      # - name: Commit and push changes
+      # - name: Commit changes
       #   run: |
       #     git config user.name "github-actions"
       #     git config user.email "github-actions@github.com"
       #     git add client-code/pom.xml
-      #     if git diff --cached --quiet; then
-      #       echo "No changes to commit"
-      #     else
-      #       git commit -m "Auto-update client-code/pom.xml from root pom.xml"
-      #       git push
-      #     fi
+      #     git commit -m "Sync client-code/pom.xml with root pom.xml"
+      #     git push
