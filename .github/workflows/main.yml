@@ -1,6 +1,7 @@
 name: Update Secondary POM
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
