@@ -1,73 +1,61 @@
-name: Sync POM Values
+name: Update Secondary POM
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
-  update-client-pom:
+  update-pom:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      
+
       - name: Install xmlstarlet
-        run: sudo apt-get update && sudo apt-get install -y xmlstarlet
+        run: sudo apt-get install -y xmlstarlet
 
+      - name: Define Spring Boot Version
+        run: echo "SPRING_BOOT_VERSION=3.5.4" >> $GITHUB_ENV
 
-      - name: Extract values from root POM
-        id: extract
+      - name: Extract values from primary pom.xml
         run: |
-          ROOT_POM="pom.xml"
+          PARENT_GROUP_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:groupId" pom.xml)
+          PARENT_ARTIFACT_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:artifactId" pom.xml)
+          PARENT_VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:version" pom.xml)
+          PARENT_PACKAGING=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:packaging" pom.xml)
 
-          groupId=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:groupId" $ROOT_POM)
+          echo "PARENT_GROUP_ID=$PARENT_GROUP_ID" >> $GITHUB_ENV
+          echo "PARENT_ARTIFACT_ID=$PARENT_ARTIFACT_ID" >> $GITHUB_ENV
+          echo "PARENT_VERSION=$PARENT_VERSION" >> $GITHUB_ENV
+          echo "PARENT_PACKAGING=$PARENT_PACKAGING" >> $GITHUB_ENV
 
-          artifactId=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:artifactId" $ROOT_POM)
-
-          version=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:version" $ROOT_POM)
-
-          springBootVersion=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
-            -t -v "/x:project/x:properties/x:spring-boot-version" $ROOT_POM)
-
-          echo "groupId=$groupId" >> $GITHUB_ENV
-          echo "artifactId=$artifactId" >> $GITHUB_ENV
-          echo "version=$version" >> $GITHUB_ENV
-          echo "springBootVersion=$springBootVersion" >> $GITHUB_ENV
-
-          echo "Extracted values:"
-          echo "  groupId: $groupId"
-          echo "  artifactId: $artifactId"
-          echo "  version: $version"
-          echo "  springBootVersion: $springBootVersion"
-
-      - name: Update client pom
+      - name: Update secondary pom.xml
         run: |
-          SECONDARY_POM="client-code/pom.xml"
+          # Update Spring Boot version manually
+          xmlstarlet ed --inplace \
+            -u "/x:project/x:properties/x:spring-boot-version" \
+            -v "$SPRING_BOOT_VERSION" client-code/pom.xml \
+            -N x="http://maven.apache.org/POM/4.0.0"
 
-          xmlstarlet ed -L \
-            -N x="http://maven.apache.org/POM/4.0.0" \
-            -u "/x:project/x:properties/x:spring-boot-version" -v "$springBootVersion" \
-            -u "/x:project/x:groupId" -v "$groupId" \
-            -u "/x:project/x:artifactId" -v "${artifactId}-client" \
-            -u "/x:project/x:version" -v "$version" \
-            $SECONDARY_POM
+          # Update groupId, artifactId, version, packaging from parent pom
+          xmlstarlet ed --inplace \
+            -u "/x:project/x:groupId" -v "$PARENT_GROUP_ID" \
+            -u "/x:project/x:artifactId" -v "MyrishuService-client" \
+            -u "/x:project/x:version" -v "$PARENT_VERSION" \
+            -u "/x:project/x:packaging" -v "$PARENT_PACKAGING" \
+            -N x="http://maven.apache.org/POM/4.0.0" client-code/pom.xml
 
-          # Format XML for readability
-          xmlstarlet fo $SECONDARY_POM > $SECONDARY_POM.tmp && mv $SECONDARY_POM.tmp $SECONDARY_POM
+      - name: Print updated secondary pom.xml
+        run: cat client-code/pom.xml
 
-          echo "Updated client POM (client-code/pom.xml):"
-          cat $SECONDARY_POM
-
-      # - name: Commit changes
+      # - name: Commit and push changes
       #   run: |
-      #     git config user.name "github-actions"
-      #     git config user.email "github-actions@github.com"
+      #     git config --global user.name "github-actions"
+      #     git config --global user.email "github-actions@github.com"
       #     git add client-code/pom.xml
-      #     git commit -m "Sync client-code/pom.xml with root pom.xml"
+      #     git commit -m "Update secondary pom.xml from parent pom.xml"
       #     git push
