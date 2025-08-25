@@ -1,65 +1,72 @@
-name: Generate Client Code
+name: Update Client POM
 
 on:
   push:
-    # paths:
-    #   - "swagger.json"   # only run when swagger.json changes
+    # branches:
+    #   - main
+  workflow_dispatch:
 
 jobs:
-  generate-client:
+  update-pom:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      
-      - name: Install xmllint
-        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+      - name: Install xmlstarlet
+        run: sudo apt-get update && sudo apt-get install -y xmlstarlet
 
-      - name: Extract repo name and parent version
-        id: vars
+      - name: Extract values from root pom
+        id: extract
         run: |
-          REPO_NAME=$(basename $GITHUB_REPOSITORY)
-          VERSION=$(xmlstarlet sel -t -v "/project/version" pom.xml)
-          GROUP_ID=$(xmlstarlet sel -t -v "/project/groupId" pom.xml)
-          ARTIFACT_ID=$(xmlstarlet sel -t -v "/project/artifactId" pom.xml)
+          PRIMARY_POM="pom.xml"
 
-          echo "Repo Name   : $REPO_NAME"
-          echo "Version     : $VERSION"
-          echo "Group ID    : $GROUP_ID"
-          echo "Artifact ID : $ARTIFACT_ID"
+          GROUP_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:groupId" $PRIMARY_POM)
 
-          echo "repo=$REPO_NAME" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "group=$GROUP_ID" >> $GITHUB_OUTPUT
-          echo "artifact=$ARTIFACT_ID" >> $GITHUB_OUTPUT
+          ARTIFACT_ID=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:artifactId" $PRIMARY_POM)
 
+          VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:version" $PRIMARY_POM)
 
-      # - name: Generate Client Code
+          SPRING_BOOT_VERSION=$(xmlstarlet sel -N x="http://maven.apache.org/POM/4.0.0" \
+            -t -v "/x:project/x:parent/x:version" $PRIMARY_POM)
+
+          echo "Extracted values:"
+          echo "  groupId=$GROUP_ID"
+          echo "  artifactId=$ARTIFACT_ID"
+          echo "  version=$VERSION"
+          echo "  springBootVersion=$SPRING_BOOT_VERSION"
+
+          echo "groupId=$GROUP_ID" >> $GITHUB_ENV
+          echo "artifactId=$ARTIFACT_ID" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_ENV
+          echo "springBootVersion=$SPRING_BOOT_VERSION" >> $GITHUB_ENV
+
+      - name: Update client pom
+        run: |
+          SECONDARY_POM="client-code/pom.xml"
+
+          xmlstarlet ed -L \
+            -u "/x:project/x:properties/x:spring-boot-version" -v "$springBootVersion" \
+            -u "/x:project/x:groupId" -v "$groupId" \
+            -u "/x:project/x:artifactId" -v "${artifactId}-client" \
+            -u "/x:project/x:version" -v "$version" \
+            $SECONDARY_POM
+
+          echo "Updated client POM (client-code/pom.xml):"
+          cat $SECONDARY_POM
+
+      # - name: Commit and push changes
       #   run: |
-      #     java -jar ${{ steps.vars.outputs.repo }}-${{ steps.vars.outputs.version }}.jar generate \
-      #       -i swagger.json \
-      #       -g java \
-      #       -o client-code \
-      #       --library webclient \
-      #       --additional-properties useJakartaEe=true
-
-      # - name: Update Generated POM
-      #   run: |
-      #     POM_FILE=client-code/pom.xml
-
-      #     # Replace spring boot version
-      #     sed -i 's|<spring-boot-version>.*</spring-boot-version>|<spring-boot-version>3.5.4</spring-boot-version>|' $POM_FILE
-
-      #     # Update groupId, artifactId, name, version
-      #     xmlstarlet ed -L \
-      #       -u "/project/groupId" -v "${{ steps.vars.outputs.group }}" \
-      #       -u "/project/artifactId" -v "${{ steps.vars.outputs.artifact }}" \
-      #       -u "/project/name" -v "${{ steps.vars.outputs.repo }}-client-client" \
-      #       -u "/project/version" -v "${{ steps.vars.outputs.version }}" \
-      #       $POM_FILE
+      #     git config user.name "github-actions"
+      #     git config user.email "github-actions@github.com"
+      #     git add client-code/pom.xml
+      #     if git diff --cached --quiet; then
+      #       echo "No changes to commit"
+      #     else
+      #       git commit -m "Auto-update client-code/pom.xml from root pom.xml"
+      #       git push
+      #     fi
